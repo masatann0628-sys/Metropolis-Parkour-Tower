@@ -1,0 +1,187 @@
+r; align-items: center;
+            padding: 30px; box-sizing: border-box;
+        }
+        .setting-title { font-size: 28px; font-weight: bold; color: #00ffff; margin-bottom: 40px; text-shadow: 0 0 10px rgba(0,255,255,0.4); }
+        .setting-row { width: 90%; display: flex; flex-direction: column; margin-bottom: 25px; }
+        .setting-label { font-size: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; color: #ccc; }
+        .setting-label span { color: #00ffff; font-weight: bold; }
+        .setting-slider { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 5px; background: #333; outline: none; }
+        .setting-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #00ffff; cursor: pointer; box-shadow: 0 0 8px #00ffff; }
+
+        /* --- 遊び方画面 --- */
+        #how-to-play-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 10, 20, 0.95); display: none; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 2000; color: white; user-select: none;
+        }
+        .info-panel { background: rgba(255, 255, 255, 0.05); border: 2px solid #00ff7f; border-radius: 15px; padding: 30px 50px; max-width: 600px; width: 80%; box-shadow: 0 0 20px rgba(0, 255, 127, 0.2); }
+        .info-title { font-size: 32px; font-weight: bold; color: #00ff7f; text-align: center; margin-bottom: 25px; text-shadow: 0 0 10px rgba(0,255,127,0.4); }
+        .info-row { display: flex; margin-bottom: 15px; font-size: 18px; line-height: 1.6; }
+        .info-key { background: #333; border: 1px solid #777; border-radius: 5px; padding: 2px 8px; font-weight: bold; color: #ffff00; margin-right: 15px; min-width: 90px; text-align: center; box-shadow: 1px 1px 0px #555; }
+        .info-desc { flex: 1; }
+        .back-btn { margin-top: 30px; background: rgba(255,255,255,0.2); border: 2px solid white; color: white; padding: 10px 30px; font-size: 18px; font-weight: bold; border-radius: 20px; cursor: pointer; transition: background 0.2s; }
+        .back-btn:hover { background: rgba(255,255,255,0.4); }
+
+        /* --- ポーズボタン --- */
+        #pause-btn {
+            position: absolute; top: 10px; left: 10px; width: 45px; height: 45px;
+            background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.5); border-radius: 5px;
+            color: white; font-size: 20px; cursor: pointer; display: none; z-index: 900;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        #pause-btn:hover { background: rgba(255,255,255,0.2); border-color: white; }
+
+        /* --- ポーズ中左側サイドバー --- */
+        #pause-sidebar {
+            position: absolute; top: 0; left: -320px; width: 300px; height: 100%;
+            background: rgba(10, 15, 30, 0.95); border-right: 3px solid #ff00ff;
+            box-shadow: 5px 0 25px rgba(255, 0, 255, 0.2);
+            display: flex; flex-direction: column; align-items: center; padding: 40px 20px; box-sizing: border-box;
+            z-index: 1500; color: white; user-select: none;
+            transition: left 0.3s ease-out;
+        }
+        .pause-title { font-size: 26px; font-weight: bold; color: #ff00ff; margin-bottom: 30px; text-shadow: 0 0 10px rgba(255,0,255,0.4); text-align: center; }
+        .sidebar-divider { width: 100%; height: 2px; background: rgba(255,255,255,0.1); margin: 15px 0; }
+        .sidebar-btn {
+            width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.4);
+            color: white; padding: 12px 0; font-size: 16px; font-weight: bold; border-radius: 5px;
+            cursor: pointer; margin-bottom: 12px; transition: background 0.2s; text-align: center;
+        }
+        .sidebar-btn:hover { background: rgba(255, 0, 255, 0.2); border-color: #ff00ff; }
+        .sidebar-btn-resume { background: linear-gradient(135deg, #ff00ff, #0055FF); border: none; margin-top: 10px; }
+        .sidebar-btn-resume:hover { box-shadow: 0 0 10px rgba(255,0,255,0.5); }
+        .sidebar-slider::-webkit-slider-thumb { background: #ff00ff !important; box-shadow: 0 0 8px #ff00ff !important; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+    <!-- ユーザー名設定画面（最初に表示） -->
+    <div id="username-screen">
+        <div class="username-panel">
+            <div class="username-title">ユーザー名を入力</div>
+            <input type="text" id="username-input" class="username-input" placeholder="例: Player123" maxlength="15">
+            <button class="home-btn" style="width: 80%;" onclick="submitUsername()">決定する</button>
+        </div>
+    </div>
+
+    <!-- キャラクター選択画面 -->
+    <div id="character-select-screen">
+        <div class="char-panel">
+            <div class="char-title">キャラクターを選択</div>
+            <div class="char-grid">
+                <div class="char-card selected" onclick="selectCharacter('noob', this)">
+                    <div style="font-size: 32px;">🤖</div>
+                    <div class="char-name">ぬーぶくん</div>
+                </div>
+                <div class="char-card" onclick="selectCharacter('bacon', this)">
+                    <div style="font-size: 32px;">🥓</div>
+                    <div class="char-name">ベーコンヘアーくん</div>
+                </div>
+                <div class="char-card" onclick="selectCharacter('girl', this)">
+                    <div style="font-size: 32px;">🎀</div>
+                    <div class="char-name">ガールちゃん</div>
+                </div>
+                <div class="char-card" onclick="selectCharacter('steve', this)">
+                    <div style="font-size: 32px;">🟩</div>
+                    <div class="char-name">スティーブ</div>
+                </div>
+                <div class="char-card" onclick="selectCharacter('alex', this)">
+                    <div style="font-size: 32px;">🟧</div>
+                    <div class="char-name">アレックス</div>
+                </div>
+            </div>
+                const tMat = new THREE.MeshStandardMaterial({ color: torsoColor, roughness: 0.7 });
+            const tMesh = new THREE.Mesh(tGeo, tMat); tMesh.position.y = 0.0; pGroup.add(tMesh);
+
+            const lLP = new THREE.Group(); lLP.position.set(-0.23, -0.4, 0);
+            const rLP = new THREE.Group(); rLP.position.set(0.23, -0.4, 0);
+            const lAP = new THREE.Group(); lAP.position.set(-0.65, 0.3, 0);
+            const rAP = new THREE.Group(); rAP.position.set(0.65, 0.3, 0);
+
+            const lGeo = new THREE.BoxGeometry(0.42, 0.65, 0.42);
+            const lMat = new THREE.MeshStandardMaterial({ color: legColor, roughness: 0.7 });
+            const ll = new THREE.Mesh(lGeo, lMat); ll.position.y = -0.325; lLP.add(ll);
+            const rl = new THREE.Mesh(lGeo, lMat); rl.position.y = -0.325; rLP.add(rl);
+
+            const armWidth = (type === 'alex') ? 0.28 : 0.38;
+            if (type === 'alex') {
+                lAP.position.set(-0.59, 0.3, 0);
+                rAP.position.set(0.59, 0.3, 0);
+            }
+            const aGeo = new THREE.BoxGeometry(armWidth, 0.75, 0.38);
+            const aMat = new THREE.MeshStandardMaterial({ color: armColor, roughness: 0.7 });
+            const la = new THREE.Mesh(aGeo, aMat); la.position.y = -0.325; lAP.add(la);
+            const ra = new THREE.Mesh(aGeo, aMat); ra.position.y = -0.325; rAP.add(ra);
+
+            pGroup.add(lLP); pGroup.add(rLP); pGroup.add(lAP); pGroup.add(rAP);
+            scene.add(pGroup);
+            return pGroup;
+        }
+
+        setTimeout(() => {
+            const panel = document.querySelector('.home-square-panel');
+            const div = document.createElement('div');
+            div.style.marginTop = "15px";
+            div.style.fontSize = "12px";
+            div.innerHTML = `
+                <input id="peer-id-input" placeholder="相手のID" style="padding:4px; width:110px; border-radius:4px; border:none;">
+                <button onclick="connectToPeer()" style="padding:4px 8px; background:#00ffff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">接続</button>
+                <div id="my-peer-id" style="margin-top:5px; color:#00ff7f; word-break:break-all;">マイID取得中...</div>
+            `;
+            panel.appendChild(div);
+
+            peer = new Peer();
+            peer.on('open', (id) => {
+                document.getElementById("my-peer-id").innerText = "マイID: " + id;
+            });
+
+            peer.on('connection', (c) => {
+                conn = c;
+                setupConnection();
+            });
+        }, 500);
+
+        function connectToPeer() {
+            const id = document.getElementById("peer-id-input").value;
+            if(!id) return;
+            conn = peer.connect(id);
+            setupConnection();
+        }
+
+        function setupConnection() {
+            conn.on('open', () => {
+                alert("オンライン接続成功！");
+            });
+            conn.on('data', (data) => {
+                if(!remotePlayers[data.id]) {
+                    remotePlayers[data.id] = {
+                        mesh: createRemotePlayerMesh(data.charType, data.username),
+                        x: data.x, y: data.y, z: data.z, yaw: data.yaw, moving: data.moving
+                    };
+                } else {
+                    let rp = remotePlayers[data.id];
+                    rp.mesh.userData.username = data.username;
+                    rp.x = data.x; rp.y = data.y; rp.z = data.z; rp.yaw = data.yaw; rp.moving = data.moving;
+                }
+            });
+        }
+
+        setInterval(() => {
+            if(conn && conn.open && gameStarted) {
+                conn.send({
+                    id: peer.id,
+                    username: myUsername,
+                    charType: selectedCharType,
+                    x: pos.x, y: pos.y, z: pos.z,
+                    yaw: cameraYaw,
+                    moving: (keys.w || keys.s)
+                });
+            }
+        }, 50);
+
+        animate();
+    </script>
+</body>
+</html>
