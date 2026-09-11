@@ -1,4 +1,140 @@
-r; align-items: center;
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>大都会パルクールタワー - ロブロックスモーション完全再現版</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        #ui {
+            position: absolute; top: 10px; left: 65px; color: white;
+            font-size: 20px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+        #checkpoint-ui {
+            position: absolute; top: 50px; left: 65px; color: #ffff00;
+            font-size: 18px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            display: none; transition: opacity 0.5s;
+        }
+        #goal-ui {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #00ffff; font-size: 36px; font-weight: bold;
+            text-shadow: 0 0 10px rgba(0,255,255,0.6), 3px 3px 5px rgba(0,0,0,0.9);
+            display: none; text-align: center; background: rgba(0,0,0,0.75);
+            padding: 30px 50px; border-radius: 15px; border: 2px solid #00ffff;
+            z-index: 100; pointer-events: none;
+        }
+
+        /* --- ユーザー名表示用（マウスオーバー時） --- */
+        #nameplate-ui {
+            position: absolute; color: white; background: rgba(0,0,0,0.7);
+            padding: 4px 8px; border-radius: 4px; font-size: 14px; font-weight: bold;
+            pointer-events: none; display: none; z-index: 500;
+            border: 1px solid rgba(255,255,255,0.3);
+            transform: translate(-50%, -100%);
+            white-space: nowrap;
+        }
+
+        /* --- ユーザー名設定画面（最初に開く） --- */
+        #username-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 15, 30, 0.95); display: flex; justify-content: center; align-items: center;
+            z-index: 1500; color: white; user-select: none;
+        }
+        .username-panel {
+            width: 450px; height: 350px; background: rgba(10, 15, 30, 0.95);
+            border: 3px solid #00ff7f; border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 255, 127, 0.3);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 30px; box-sizing: border-box;
+        }
+        .username-title { font-size: 26px; font-weight: bold; color: #00ff7f; margin-bottom: 25px; text-shadow: 0 0 10px rgba(0,255,127,0.4); text-align: center; }
+        .username-input {
+            width: 80%; padding: 12px; font-size: 18px; border-radius: 8px; border: 2px solid #555;
+            background: #222; color: white; text-align: center; margin-bottom: 25px; outline: none;
+        }
+        .username-input:focus { border-color: #00ff7f; }
+
+        /* --- キャラクター選択画面 --- */
+        #character-select-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 15, 30, 0.95); display: none; justify-content: center; align-items: center;
+            z-index: 1200; color: white; user-select: none;
+        }
+        .char-panel {
+            width: 650px; background: rgba(10, 15, 30, 0.95);
+            border: 3px solid #00ff7f; border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 255, 127, 0.3);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 30px; box-sizing: border-box;
+        }
+        .char-title { font-size: 28px; font-weight: bold; color: #00ff7f; margin-bottom: 25px; text-shadow: 0 0 10px rgba(0,255,127,0.4); text-align: center; }
+        .char-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; width: 100%; max-height: 400px; overflow-y: auto; padding: 5px; }
+        .char-card {
+            width: 100%; height: 160px; background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.2); border-radius: 12px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; transition: transform 0.2s, border-color 0.2s; padding: 10px; box-sizing: border-box;
+        }
+        .char-card:hover { transform: scale(1.05); border-color: #00ff7f; background: rgba(0,255,127,0.1); }
+        .char-card.selected { border-color: #00ff7f; background: rgba(0,255,127,0.2); box-shadow: 0 0 15px rgba(0,255,127,0.4); }
+        .char-name { font-size: 15px; font-weight: bold; margin-top: 10px; color: white; text-align: center; }
+
+        /* --- ホーム画面 --- */
+        #home-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: transparent; display: none; justify-content: center; align-items: center;
+            z-index: 1000; color: white; user-select: none;
+        }
+        .home-square-panel {
+            position: relative; width: 450px; height: 450px;
+            background: rgba(10, 15, 30, 0.85); border: 3px solid #00ff7f; border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 255, 127, 0.3), inset 0 0 15px rgba(0, 85, 255, 0.2);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px; box-sizing: border-box;
+        }
+        #home-setting-btn {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3);
+            color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px;
+        }
+        #home-setting-btn:hover { background: rgba(255,255,255,0.25); }
+        #home-title {
+            font-size: 32px; font-weight: bold; letter-spacing: 2px; text-align: center;
+            margin-top: 40px; margin-bottom: 50px;
+            text-shadow: 0 0 12px rgba(0,255,255,0.6), 2px 2px 4px black; color: #f0f8ff; line-height: 1.4;
+        }
+        .home-menu-group { display: flex; flex-direction: column; gap: 20px; width: 80%; }
+        .home-btn {
+            background: linear-gradient(135deg, #0055FF, #00ff7f);
+            border: none; color: white; padding: 12px 0; font-size: 20px; font-weight: bold;
+            border-radius: 25px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,85,255,0.3);
+            transition: transform 0.2s, box-shadow 0.2s; text-align: center;
+        }
+        .home-btn:hover { transform: scale(1.05); box-shadow: 0 6px 18px rgba(0,255,127,0.5); }
+        .home-btn-sub { background: rgba(255,255,255,0.1); border: 2px solid white; }
+        .home-btn-sub:hover { box-shadow: 0 6px 18px rgba(255,255,255,0.3); }
+
+        /* --- ロード中画面 --- */
+        #loading-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgb(10, 12, 22); display: none; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 3000; color: white; user-select: none;
+        }
+        .loading-text { font-size: 24px; font-weight: bold; color: #00ff7f; margin-bottom: 20px; letter-spacing: 4px; text-shadow: 0 0 10px rgba(0,255,127,0.5); }
+        .progress-container { width: 300px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; border: 1px solid rgba(0,255,127,0.3); }
+        .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #0055FF, #00ff7f); box-shadow: 0 0 10px #00ff7f; transition: width 0.05s linear; }
+
+        /* --- ホーム設定画面 --- */
+        #home-setting-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 10, 20, 0.6); display: none; justify-content: center; align-items: center;
+            z-index: 1002; color: white; user-select: none;
+        }
+        .setting-panel {
+            width: 450px; height: 450px; background: rgba(10, 15, 30, 0.95);
+            border: 3px solid #00ffff; border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
             padding: 30px; box-sizing: border-box;
         }
         .setting-title { font-size: 28px; font-weight: bold; color: #00ffff; margin-bottom: 40px; text-shadow: 0 0 10px rgba(0,255,255,0.4); }
@@ -92,7 +228,856 @@ r; align-items: center;
                     <div class="char-name">アレックス</div>
                 </div>
             </div>
-                const tMat = new THREE.MeshStandardMaterial({ color: torsoColor, roughness: 0.7 });
+            <button class="home-btn" style="width: 50%;" onclick="confirmCharacter()">次へ</button>
+        </div>
+    </div>
+
+    <div id="home-screen">
+        <div class="home-square-panel">
+            <button id="home-setting-btn" onclick="showHomeSettings()">＋ 設定</button>
+            <div id="home-title">大都市<br>パルクールタワー</div>
+            <div class="home-menu-group">
+                <button class="home-btn" onclick="startLoading()">始める</button>
+                <button class="home-btn home-btn-sub" onclick="showHowToPlay()">遊び方</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading-screen">
+        <div class="loading-text">LOADING...</div>
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+    </div>
+
+    <div id="home-setting-screen">
+        <div class="setting-panel">
+            <div class="setting-title">ゲーム設定</div>
+            <div class="setting-row">
+                <div class="setting-label">カメラ感度: <span id="val-sens-home">1.0x</span></div>
+                <input type="range" id="slider-sens-home" class="setting-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSensitivity(this.value)">
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">移動速度: <span id="val-speed-home">1.0x</span></div>
+                <input type="range" id="slider-speed-home" class="setting-slider" min="0.8" max="1.3" step="0.05" value="1.0" oninput="updateSpeed(this.value)">
+            </div>
+            <button class="back-btn" onclick="hideHomeSettings()">閉じる</button>
+        </div>
+    </div>
+
+    <div id="how-to-play-screen">
+        <div class="info-panel">
+            <div class="info-title">操作方法（遊び方）</div>
+            <div class="info-row">
+                <div class="info-key">[W] / [S]</div>
+                <div class="info-desc">プレイヤーの前後移動</div>
+            </div>
+            <div class="info-row">
+                <div class="info-key">[Shift]</div>
+                <div class="info-desc">ジャンプ（空中へ飛び跳ねる）</div>
+            </div>
+            <div class="info-row">
+                <div class="info-key">矢印キー</div>
+                <div class="info-desc">[←][→] で左右カメラ回転、[↑][↓] で上下を見渡す</div>
+            </div>
+            <div class="info-row">
+                <div class="info-key">[M]</div>
+                <div class="info-desc">カメラ視点の切り替え（後ろ3人称、前3人称、1人称）</div>
+            </div>
+            <div class="info-row">
+                <div class="info-key">[J] ＋ [K]</div>
+                <div class="info-desc">同時に長押し/連打で自爆リトライ（復活地点に戻る）</div>
+            </div>
+            <div style="text-align: center;">
+                <button class="back-btn" onclick="hideHowToPlay()">戻る</button>
+            </div>
+        </div>
+    </div>
+
+    <button id="pause-btn" onclick="togglePause()">⏸</button>
+
+    <div id="pause-sidebar">
+        <div class="pause-title">ポーズ中</div>
+        
+        <div class="setting-row">
+            <div class="setting-label">カメラ感度: <span id="val-sens-pause">1.0x</span></div>
+            <input type="range" id="slider-sens-pause" class="setting-slider sidebar-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSensitivity(this.value)">
+        </div>
+        <div class="setting-row">
+            <div class="setting-label">移動速度: <span id="val-speed-pause">1.0x</span></div>
+            <input type="range" id="slider-speed-pause" class="setting-slider sidebar-slider" min="0.8" max="1.3" step="0.05" value="1.0" oninput="updateSpeed(this.value)">
+        </div>
+
+        <button class="sidebar-btn" onclick="showHowToPlay()">遊び方</button>
+        <button class="sidebar-btn" onclick="backToStartLocation()">スタート地点に戻る</button>
+        <button class="sidebar-btn" onclick="backToHome()">ホーム画面に戻る</button>
+
+        <div class="sidebar-divider"></div>
+        <button class="sidebar-btn sidebar-btn-resume" onclick="togglePause()">ゲームに戻る</button>
+    </div>
+
+    <div id="ui">高度: <span id="heightUI">0</span>m | 視点: <span id="cameraUI">3人称(後ろ)</span></div>
+    <div id="checkpoint-ui">🚩 チェックポイント通過！(復活地点が更新されました)</div>
+    <div id="nameplate-ui"></div>
+    
+    <div id="goal-ui">
+        🏆 完全制覇！！！ 🏆<br>
+        <span style="font-size: 22px; color: white; display:block; margin-top:10px;">頂に達しました！おめでとう！✨</span>
+        <span style="font-size: 14px; color: #aaa; display:block; margin-top:15px;">まもなくスタート地点に戻ります...</span>
+    </div>
+
+    <script>
+        // --- システム・設定変数 ---
+        let gameStarted = false;
+        let isPaused = false;
+
+        let sensMultiplier = 1.0;  
+        let speedMultiplier = 1.0; 
+
+        const baseSpeed = 0.15;
+        const baseCamYawSpeed = 0.13;
+        const baseCamPitchSpeed = 0.095;
+
+        let myUsername = "Player";
+        let selectedCharType = "noob";
+
+        function submitUsername() {
+            const inputVal = document.getElementById("username-input").value.trim();
+            if(inputVal) myUsername = inputVal;
+            document.getElementById("username-screen").style.display = "none";
+            document.getElementById("character-select-screen").style.display = "flex";
+        }
+
+        function selectCharacter(type, el) {
+            selectedCharType = type;
+            document.querySelectorAll('.char-card').forEach(card => card.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        function confirmCharacter() {
+            document.getElementById("character-select-screen").style.display = "none";
+            document.getElementById("home-screen").style.display = "flex";
+            buildPlayerMesh(selectedCharType);
+        }
+
+        // --- ロード処理とゲーム開始 ---
+        function startLoading() {
+            document.getElementById("home-screen").style.display = "none";
+            const loadingScreen = document.getElementById("loading-screen");
+            const progressBar = document.getElementById("progress-bar");
+            loadingScreen.style.display = "flex";
+            progressBar.style.width = "0%";
+
+            let width = 0;
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                    loadingScreen.style.display = "none";
+                    startGame(); 
+                } else {
+                    width += 4;
+                    progressBar.style.width = width + "%";
+                }
+            }, 60);
+        }
+
+        function startGame() {
+            gameStarted = true;
+            document.getElementById("pause-btn").style.display = "block";
+            resetPlayer();
+        }
+
+        function showHowToPlay() { document.getElementById("how-to-play-screen").style.display = "flex"; }
+        function hideHowToPlay() { document.getElementById("how-to-play-screen").style.display = "none"; }
+
+        function showHomeSettings() { document.getElementById("home-setting-screen").style.display = "flex"; }
+        function hideHomeSettings() { document.getElementById("home-setting-screen").style.display = "none"; }
+
+        function updateSensitivity(val) {
+            sensMultiplier = parseFloat(val);
+            document.getElementById("slider-sens-home").value = val;
+            document.getElementById("slider-sens-pause").value = val;
+            document.getElementById("val-sens-home").innerText = parseFloat(val).toFixed(1) + "x";
+            document.getElementById("val-sens-pause").innerText = parseFloat(val).toFixed(1) + "x";
+        }
+
+        function updateSpeed(val) {
+            speedMultiplier = parseFloat(val);
+            document.getElementById("slider-speed-home").value = val;
+            document.getElementById("slider-speed-pause").value = val;
+            document.getElementById("val-speed-home").innerText = parseFloat(val).toFixed(2) + "x";
+            document.getElementById("val-speed-pause").innerText = parseFloat(val).toFixed(2) + "x";
+        }
+
+        function togglePause() {
+            if (!gameStarted) return;
+            isPaused = !isPaused;
+            const sidebar = document.getElementById("pause-sidebar");
+            if (isPaused) {
+                sidebar.style.left = "0px"; 
+                for (let k in keys) keys[k] = false;
+            } else {
+                sidebar.style.left = "-320px"; 
+            }
+        }
+
+        function backToStartLocation() {
+            respawnPos = { x: 0, y: 3, z: 8 };
+            currentCheckpointId = null;
+            document.getElementById("checkpoint-ui").style.display = "none";
+            resetPlayer();
+            togglePause();
+        }
+
+        function backToHome() {
+            isPaused = false;
+            gameStarted = false;
+            document.getElementById("pause-sidebar").style.left = "-320px";
+            document.getElementById("pause-btn").style.display = "none";
+            document.getElementById("home-screen").style.display = "flex";
+            respawnPos = { x: 0, y: 3, z: 8 };
+            currentCheckpointId = null;
+            document.getElementById("checkpoint-ui").style.display = "none";
+            resetPlayer();
+        }
+
+        // --- ゲームの基本設定（Three.js） ---
+        const scene = new THREE.Scene();
+
+        const vertexShader = `
+            varying vec3 vWorldPosition;
+            void main() {
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * viewMatrix * worldPosition;
+            }
+        `;
+        const fragmentShader = `
+            varying vec3 vWorldPosition;
+            void main() {
+                vec3 skyColor = vec3(0.4, 0.6, 1.0);  
+                vec3 horizonColor = vec3(0.8, 0.9, 1.0); 
+                float h = normalize(vWorldPosition).y;
+                gl_FragColor = vec4(mix(horizonColor, skyColor, max(h, 0.0)), 1.0);
+            }
+        `;
+        const skyGeo = new THREE.SphereGeometry(500, 32, 15);
+        const skyMat = new THREE.ShaderMaterial({ vertexShader: vertexShader, fragmentShader: fragmentShader, side: THREE.BackSide });
+        const sky = new THREE.Mesh(skyGeo, skyMat);
+        scene.add(sky);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(30, 100, 20);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // --- 中心にある巨大な柱 ---
+        const centerGeo = new THREE.CylinderGeometry(2, 2, 160, 32); 
+        const centerMat = new THREE.MeshStandardMaterial({ color: 0x555566 });
+        const centerPole = new THREE.Mesh(centerGeo, centerMat);
+        centerPole.position.y = 75;
+        scene.add(centerPole);
+
+        // --- 下の地面 ---
+        const roadGroup = new THREE.Group();
+        const roadFloorGeo = new THREE.PlaneGeometry(600, 600); 
+        const roadFloorMat = new THREE.MeshStandardMaterial({ color: 0x333338, roughness: 0.9 }); 
+        const roadFloor = new THREE.Mesh(roadFloorGeo, roadFloorMat);
+        roadFloor.rotation.x = -Math.PI / 2;
+        roadFloor.position.y = -20; 
+        roadGroup.add(roadFloor);
+
+        for (let i = -300; i <= 300; i += 10) {
+            if (i === 0) continue;
+            const lineGeo1 = new THREE.PlaneGeometry(0.3, 5);
+            const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const line1 = new THREE.Mesh(lineGeo1, lineMat);
+            line1.rotation.x = -Math.PI / 2;
+            line1.position.set(0, -19.9, i);
+            roadGroup.add(line1);
+
+            const line2 = new THREE.Mesh(lineGeo1, lineMat);
+            line2.rotation.x = -Math.PI / 2;
+            line2.rotation.z = Math.PI / 2;
+            line2.position.set(i, -19.9, 0);
+            roadGroup.add(line2);
+        }
+        scene.add(roadGroup);
+
+        // --- ビル群の自動生成 ---
+        const buildingColors = [0x7d84b2, 0x8d99ae, 0xd8d5db, 0x5e503f, 0x2b2d42, 0x4a4e69];
+        const windowColors = [0xfffae0, 0xfff4cc, 0xffffff];
+
+        for (let i = 0; i < 80; i++) { 
+            const w = Math.random() * 8 + 6;
+            const h = Math.random() * 60 + 20;
+            const d = Math.random() * 8 + 6;
+            const buildingGroup = new THREE.Group();
+            const buildingGeo = new THREE.BoxGeometry(w, h, d);
+            const randomColor = buildingColors[Math.floor(Math.random() * buildingColors.length)];
+            const buildingMat = new THREE.MeshStandardMaterial({ color: randomColor, roughness: 0.5 });
+            const baseBuilding = new THREE.Mesh(buildingGeo, buildingMat);
+            buildingGroup.add(baseBuilding);
+
+            const rows = Math.floor(h / 4);     
+            const cols = Math.floor(w / 2);     
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (Math.random() > 0.4) {
+                        const winGeo = new THREE.PlaneGeometry(0.4, 0.6);
+                        const randomWinColor = windowColors[Math.floor(Math.random() * windowColors.length)];
+                        const winMat = new THREE.MeshBasicMaterial({ color: randomWinColor, side: THREE.DoubleSide });
+                        const winMesh = new THREE.Mesh(winGeo, winMat);
+                        const randomY = -h/2 + 2 + (r * 3.5);
+                        const randomX = -w/2 + 1 + (c * 1.8);
+
+                        const winFront = winMesh.clone(); winFront.position.set(randomX, randomY, d / 2 + 0.02); buildingGroup.add(winFront);
+                        const winBack = winMesh.clone(); winBack.position.set(randomX, randomY, -d / 2 - 0.02); buildingGroup.add(winBack);
+                    }
+                }
+            }
+            let bx, bz;
+            do {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 160 + 40; 
+                bx = Math.cos(angle) * radius;
+                bz = Math.sin(angle) * radius;
+            } while (bx < 20 && bx > -60 && bz < 20 && bz > -30);
+
+            buildingGroup.position.set(bx, -20 + h / 2, bz);
+            scene.add(buildingGroup);
+        }
+
+        // --- プレイヤー生成関数（ぬーぶ、ベーコン、ガール、スティーブ、アレックス対応） ---
+        let player = new THREE.Group();
+        let leftLegPivot, rightLegPivot, leftArmPivot, rightArmPivot;
+
+        function buildPlayerMesh(type) {
+            scene.remove(player);
+            player = new THREE.Group();
+            player.userData = { username: myUsername };
+
+            let skinColor = 0xFFD700;
+            let torsoColor = 0x0055FF;
+            let legColor = 0x22AA22;
+            let armColor = 0xFFD700;
+
+            if (type === 'bacon') {
+                skinColor = 0xffcc99;
+                torsoColor = 0xcc0000;
+                legColor = 0x0033cc;
+                armColor = 0xffcc99;
+            } else if (type === 'girl') {
+                skinColor = 0xffcc99;
+                torsoColor = 0xff66b2;
+                legColor = 0x333333;
+                armColor = 0xffcc99;
+            } else if (type === 'steve') {
+                skinColor = 0xc48c64;
+                torsoColor = 0x2d5a7d;
+                legColor = 0x3b3b6b;
+                armColor = 0xc48c64;
+            } else if (type === 'alex') {
+                skinColor = 0xd89d7a;
+                torsoColor = 0x738c42;
+                legColor = 0x735a3b;
+                armColor = 0xd89d7a;
+            }
+
+            const headGeo = new THREE.BoxGeometry(0.65, 0.65, 0.65);
+            const headMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.7 }); 
+            const head = new THREE.Mesh(headGeo, headMat); head.position.y = 0.72; head.castShadow = true; player.add(head);
+
+            if (type === 'bacon') {
+                const hairGeo = new THREE.BoxGeometry(0.7, 0.2, 0.7);
+                const hairMat = new THREE.MeshStandardMaterial({ color: 0x996633, roughness: 0.9 });
+                const hair = new THREE.Mesh(hairGeo, hairMat);
+                hair.position.set(0, 1.05, 0);
+                player.add(hair);
+                const strandGeo = new THREE.BoxGeometry(0.15, 0.5, 0.15);
+                const strand = new THREE.Mesh(strandGeo, hairMat);
+                strand.position.set(-0.35, 0.8, -0.2);
+                player.add(strand);
+            } else if (type === 'girl') {
+                const hairGeo = new THREE.BoxGeometry(0.72, 0.7, 0.72);
+                const hairMat = new THREE.MeshStandardMaterial({ color: 0x553311, roughness: 0.9 });
+                const hair = new THREE.Mesh(hairGeo, hairMat);
+                hair.position.set(0, 0.75, 0);
+                player.add(hair);
+            } else if (type === 'steve') {
+                const hairGeo = new THREE.BoxGeometry(0.67, 0.25, 0.67);
+                const hairMat = new THREE.MeshStandardMaterial({ color: 0x3b220a, roughness: 0.9 });
+                const hair = new THREE.Mesh(hairGeo, hairMat);
+                hair.position.set(0, 0.92, 0);
+                player.add(hair);
+            } else if (type === 'alex') {
+                const hairGeo = new THREE.BoxGeometry(0.67, 0.3, 0.67);
+                const hairMat = new THREE.MeshStandardMaterial({ color: 0xd9822b, roughness: 0.9 });
+                const hair = new THREE.Mesh(hairGeo, hairMat);
+                hair.position.set(0, 0.9, 0);
+                player.add(hair);
+            }
+
+            const faceGroup = new THREE.Group();
+            faceGroup.position.set(0, 0.72, -0.33); 
+            const blackMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+
+            const eyeGeo = new THREE.BoxGeometry(0.08, 0.08, 0.01);
+            const leftEye = new THREE.Mesh(eyeGeo, blackMat); leftEye.position.set(-0.14, 0.06, 0); faceGroup.add(leftEye);
+            const rightEye = new THREE.Mesh(eyeGeo, blackMat); rightEye.position.set(0.14, 0.06, 0); faceGroup.add(rightEye);
+
+            const mouthCenterGeo = new THREE.BoxGeometry(0.2, 0.04, 0.01);
+            const mouthCenter = new THREE.Mesh(mouthCenterGeo, blackMat); mouthCenter.position.set(0, -0.1, 0); faceGroup.add(mouthCenter);
+            const mouthLeftGeo = new THREE.BoxGeometry(0.04, 0.08, 0.01);
+            const mouthLeft = new THREE.Mesh(mouthLeftGeo, blackMat); mouthLeft.position.set(-0.1, -0.08, 0); faceGroup.add(mouthLeft);
+            const mouthRight = new THREE.Mesh(mouthLeftGeo, blackMat); mouthRight.position.set(0.1, -0.08, 0); faceGroup.add(mouthRight);
+            player.add(faceGroup);
+
+            const torsoGeo = new THREE.BoxGeometry(0.9, 0.8, 0.5);
+            const torsoMat = new THREE.MeshStandardMaterial({ color: torsoColor, roughness: 0.7 });
+            const torso = new THREE.Mesh(torsoGeo, torsoMat); torso.position.y = 0.0; torso.castShadow = true; player.add(torso);
+
+            leftLegPivot = new THREE.Group(); leftLegPivot.position.set(-0.23, -0.4, 0);
+            rightLegPivot = new THREE.Group(); rightLegPivot.position.set(0.23, -0.4, 0);
+            leftArmPivot = new THREE.Group(); leftArmPivot.position.set(-0.65, 0.3, 0);
+            rightArmPivot = new THREE.Group(); rightArmPivot.position.set(0.65, 0.3, 0);
+
+            const legGeo = new THREE.BoxGeometry(0.42, 0.65, 0.42);
+            const legMat = new THREE.MeshStandardMaterial({ color: legColor, roughness: 0.7 }); 
+            const leftLeg = new THREE.Mesh(legGeo, legMat); leftLeg.position.y = -0.325; leftLeg.castShadow = true; leftLegPivot.add(leftLeg);
+            const rightLeg = new THREE.Mesh(legGeo, legMat); rightLeg.position.y = -0.325; rightLeg.castShadow = true; rightLegPivot.add(rightLeg);
+
+            const armWidth = (type === 'alex') ? 0.28 : 0.38;
+            if (type === 'alex') {
+                leftArmPivot.position.set(-0.59, 0.3, 0);
+                rightArmPivot.position.set(0.59, 0.3, 0);
+            }
+            const armGeo = new THREE.BoxGeometry(armWidth, 0.75, 0.38);
+            const armMat = new THREE.MeshStandardMaterial({ color: armColor, roughness: 0.7 }); 
+            const leftArm = new THREE.Mesh(armGeo, armMat); leftArm.position.y = -0.325; leftArm.castShadow = true; leftArmPivot.add(leftArm);
+            const rightArm = new THREE.Mesh(armGeo, armMat); rightArm.position.y = -0.325; rightArm.castShadow = true; rightArmPivot.add(rightArm);
+
+            player.add(leftLegPivot); player.add(rightLegPivot); player.add(leftArmPivot); player.add(rightArmPivot);
+            scene.add(player);
+        }
+
+        buildPlayerMesh('noob');
+
+        let pos = { x: 0, y: 3, z: 8 };
+        let vel = { x: 0, y: 0, z: 0 };
+        let isGrounded = false;
+        let isGoalCleared = false; 
+        const gravity = 0.016;    
+        const jumpForce = 0.28;  
+
+        let respawnPos = { x: 0, y: 3, z: 8 };
+        let currentCheckpointId = null; 
+        let checkpointTimeout = null;
+
+        // --- ステージ構造データ ---
+        const platformsData = [
+            [6, 1, 6, 0, 0, 8, 0x44cc44, "normal", "start"],    
+            [3, 0.5, 3, 5, 2.5, 6, 0x00ffff, "normal", "p1"],   
+            [3, 0.5, 3, 6, 5.0, 0, 0x00ffff, "normal", "p2"],   
+            [3, 0.5, 3, 4, 7.5, -5, 0x00ffff, "normal", "p3"],  
+            [5, 1, 5, -1, 10.0, -6, 0xffff00, "checkpoint", "cp_yellow"], 
+            [2.5, 0.5, 2.5, -6, 12.5, -5, 0xff00ff, "normal", "p4"], 
+            [2.5, 0.5, 2.5, -7, 15.0, 1, 0xff00ff, "normal", "p5"],  
+            [2.5, 0.5, 2.5, -4, 17.5, 5, 0xff4500, "normal", "p6"],  
+            [2.5, 0.5, 2.5, 1, 20.0, 5, 0xff4500, "normal", "p7"],   
+            [2.5, 0.5, 2.5, 5, 22.5, 1, 0x32cd32, "normal", "p8"],   
+            [2.5, 0.5, 2.5, 4, 25.0, -4, 0x32cd32, "normal", "p9"],  
+            [4, 1, 4, 0, 27.5, -7, 0x1e90ff, "checkpoint", "cp_blue"],        
+            [2, 0.5, 2, -5, 30.0, -9, 0x1e90ff, "normal", "p10"],
+            [2, 0.5, 2, -10, 32.5, -7, 0x9932cc, "normal", "p11"],     
+            [2, 0.5, 2, -15, 35.0, -9, 0x9932cc, "normal", "p12"],
+            [1.5, 0.5, 5, -20, 37.5, -9, 0xff1493, "normal", "p13"],  
+            [4, 0.5, 4, -26, 39.5, -9, 0x00ff7f, "normal", "p14"],    
+            [4, 1, 4, -31, 41.5, -9, 0xff3333, "checkpoint", "cp_red"], 
+            [2.5, 0.5, 2.5, -35, 43.5, -8, 0xff3333, "normal", "p15"],
+            [2, 0.5, 2, -38, 45.5, -5, 0xff3333, "normal", "p16"],
+            [3, 0.5, 3, -39, 47.5, 1, 0x1a237e, "normal", "p17"],   
+            [2, 0.5, 2, -36, 49.5, 5, 0x1a237e, "normal", "p18"],
+            [2, 0.5, 2, -32, 51.5, 8, 0x1a237e, "normal", "p19"],
+            [4, 1, 4, -27, 53.5, 11, 0xff9100, "checkpoint", "cp_orange"],  
+            [2, 0.5, 2, -21, 55.5, 9, 0xff9100, "normal", "p20"],
+            [2, 0.5, 2, -15, 57.5, 6, 0xff9100, "normal", "p21"],
+            [1.5, 0.5, 1.5, -9, 59.5, 6, 0xffffff, "normal", "p22"], 
+            [1.5, 0.5, 1.5, -4, 61.5, 4, 0xffffff, "normal", "p23"],
+            [3, 0.5, 3, 1, 62.5, 1, 0x7fff00, "trampoline", "tramp1"],
+            [4, 1, 4, 6, 68.5, -3, 0x111111, "checkpoint", "cp_black"],  
+            [2.5, 0.5, 2.5, 4, 70.5, -8, 0x111111, "normal", "p25"],
+            [2, 0.5, 2, 0, 72.5, -13, 0x111111, "normal", "p26"],
+            [2, 0.5, 2, -5, 74.5, -16, 0x111111, "normal", "p27"],
+            [4.0, 0.5, 4.0, -10, 76.5, -16, 0xdd2222, "moving", "move1"], 
+            [2, 0.5, 2, -17, 78.5, -13, 0x111111, "normal", "p28"],
+            [2, 0.5, 2, -17, 80.5, -7, 0x111111, "normal", "p29"],
+            [4.0, 0.5, 4.0, -12, 82.5, -2, 0xdd2222, "moving", "move2"],
+            [3, 1, 3, -6, 84.5, 1, 0x111111, "normal", "p30"],
+            [3, 0.5, 3, -1, 85.5, 3, 0x7fff00, "trampoline", "tramp2"],
+            [4, 1, 4, 5, 93.5, 3, 0x111111, "checkpoint", "cp_black_extend"], 
+            [2, 0.5, 2, 8, 95.5, -2, 0x111111, "normal", "ext1"],
+            [2, 0.5, 2, 6, 97.5, -7, 0x111111, "normal", "ext2"],
+            [2, 0.5, 2, 1, 99.5, -10, 0x111111, "normal", "ext3"],
+            [1.5, 0.5, 1.5, -4, 101.5, -10, 0xffffff, "normal", "ext_white"], 
+            [2, 0.5, 2, -9, 103.5, -7, 0x111111, "normal", "ext4"],
+            [2, 0.5, 2, -11, 105.5, -2, 0x111111, "normal", "ext5"],
+            [3, 0.5, 3, -8, 107.5, 3, 0x111111, "normal", "ext6"],
+            [2, 0.5, 2, -3, 110.0, 6, 0x111111, "normal", "ext7_new"],
+            [2, 0.5, 2, 2, 112.5, 4, 0x111111, "normal", "ext8_new"],
+            [1.5, 0.5, 1.5, 6, 115.0, 0, 0xffffff, "normal", "ext9_white_new"], 
+            [2, 0.5, 2, 3, 117.5, -4, 0x111111, "normal", "ext10_new"],
+            [6, 1, 6, 2, 119.5, -4, 0x00ffff, "goal", "final_goal"]        
+        ];
+
+        const platforms = [];
+        const cpCrystals = []; 
+
+        function createCrystal(x, y, z) {
+            const cryGeo = new THREE.OctahedronGeometry(0.8, 0); 
+            const cryMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0x888800, roughness: 0.1, metalness: 0.5 });
+            const crystal = new THREE.Mesh(cryGeo, cryMat);
+            crystal.position.set(x, y + 1.8, z); 
+            scene.add(crystal);
+            cpCrystals.push(crystal);
+        }
+
+        platformsData.forEach(data => {
+            const geo = new THREE.BoxGeometry(data[0], data[1], data[2]);
+            let mat = (data[7] === "trampoline") ? 
+                new THREE.MeshStandardMaterial({ color: data[6], emissive: 0x33aa00, roughness: 0.2 }) : 
+                new THREE.MeshStandardMaterial({ color: data[6], roughness: 0.4 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(data[3], data[4], data[5]);
+            mesh.receiveShadow = true;
+            mesh.userData = { width: data[0], height: data[1], depth: data[2], type: data[7], id: data[8], startX: data[3], startZ: data[5] };
+            scene.add(mesh);
+            platforms.push(mesh);
+            if (data[7] === "checkpoint") createCrystal(data[3], data[4], data[5]);
+        });
+
+        // --- 入力制御系 ---
+        let keys = { w: false, s: false, arrowLeft: false, arrowRight: false, arrowUp: false, arrowDown: false, shift: false, j: false, k: false };
+        let cameraMode = 0; 
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { togglePause(); return; } 
+            if (isGoalCleared || !gameStarted || isPaused) return; 
+            
+            const key = e.key.toLowerCase();
+            if(key === 'w') keys.w = true;
+            if(key === 's') keys.s = true;
+            if(key === 'j') keys.j = true;
+            if(key === 'k') keys.k = true;
+            if(e.key === 'ArrowLeft') keys.arrowLeft = true;
+            if(e.key === 'ArrowRight') keys.arrowRight = true;
+            if(e.key === 'ArrowUp') keys.arrowUp = true;
+            if(e.key === 'ArrowDown') keys.arrowDown = true;
+            if(e.key === 'Shift') keys.shift = true;
+            if(key === 'm') {
+                cameraMode = (cameraMode + 1) % 3;
+                const modeNames = ["3人称(後ろ)", "3人称(前)", "1人称"];
+                document.getElementById("cameraUI").innerText = modeNames[cameraMode];
+            }
+            if (keys.j && keys.k) resetPlayer();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if(key === 'w') keys.w = false;
+            if(key === 's') keys.s = false;
+            if(key === 'j') keys.j = false;
+            if(key === 'k') keys.k = false;
+            if(e.key === 'ArrowLeft') keys.arrowLeft = false;
+            if(e.key === 'ArrowRight') keys.arrowRight = false;
+            if(e.key === 'ArrowUp') keys.arrowUp = false;
+            if(e.key === 'ArrowDown') keys.arrowDown = false;
+            if(e.key === 'Shift') keys.shift = false;
+        });
+
+        let cameraYaw = 0;   
+        let cameraPitch = 0.3; 
+        let walkCycle = 0; 
+
+        function resetPlayer() {
+            pos = { x: respawnPos.x, y: respawnPos.y, z: respawnPos.z };
+            vel = { x: 0, y: 0, z: 0 };
+            for (let k in keys) keys[k] = false;
+        }
+
+        // --- メインループ ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = window.performance.now() * 0.002; 
+
+            if (gameStarted && !isPaused) {
+                if (keys.arrowLeft) cameraYaw += (baseCamYawSpeed * sensMultiplier);
+                if (keys.arrowRight) cameraYaw -= (baseCamYawSpeed * sensMultiplier);
+                if (keys.arrowUp) cameraPitch -= (baseCamPitchSpeed * sensMultiplier);    
+                if (keys.arrowDown) cameraPitch += (baseCamPitchSpeed * sensMultiplier);    
+                cameraPitch = Math.max(-0.6, Math.min(1.2, cameraPitch));
+
+                vel.y -= gravity;
+                
+                let moveZ = 0;
+                if (keys.w) moveZ -= (baseSpeed * speedMultiplier);
+                if (keys.s) moveZ += (baseSpeed * speedMultiplier);
+
+                let playerMoveX = moveZ * Math.sin(cameraYaw);
+                let playerMoveZ = moveZ * Math.cos(cameraYaw);
+
+                pos.x += playerMoveX;
+                pos.y += vel.y;
+                pos.z += playerMoveZ;
+
+                document.getElementById("heightUI").innerText = Math.max(0, Math.round(pos.y));
+            }
+
+            cpCrystals.forEach((crystal, index) => {
+                crystal.rotation.y += 0.03;
+                crystal.rotation.x += 0.01;
+                const cpData = platformsData.filter(d => d[7] === "checkpoint")[index];
+                if (cpData) crystal.position.y = (cpData[4] + 1.8) + Math.sin(time * 2 + index) * 0.15;
+            });
+
+            if (gameStarted && !isPaused) {
+                isGrounded = false;
+                platforms.forEach(p => {
+                    let pPos = p.position;
+                    let pData = p.userData;
+
+                    if (pData.type === "moving") {
+                        if (pData.id === "move1") pPos.x = pData.startX + Math.sin(time * 0.3) * 4.5;
+                        else if (pData.id === "move2") pPos.z = pData.startZ + Math.cos(time * 0.4) * 4.0;
+                    }
+
+                    if (pos.x + 0.45 > pPos.x - pData.width/2 && pos.x - 0.45 < pPos.x + pData.width/2 &&
+                        pos.z + 0.45 > pPos.z - pData.depth/2 && pos.z - 0.45 < pPos.z + pData.depth/2) {
+                        if (pos.y - 1.0 <= pPos.y + pData.height/2 + 0.25 && pos.y - 1.0 >= pPos.y + pData.height/2 - 0.8 && vel.y <= 0) {
+                            if (pData.type === "trampoline") {
+                                vel.y = 0.52; 
+                                pos.y = pPos.y + pData.height/2 + 1.0;
+                            } else if (pData.type === "goal") {
+                                pos.y = pPos.y + pData.height/2 + 1.0; vel.y = 0; isGrounded = true;
+                                if (!isGoalCleared) {
+                                    isGoalCleared = true; for (let k in keys) keys[k] = false;
+                                    const goalUI = document.getElementById("goal-ui");
+                                    goalUI.style.display = "block";
+                                    setTimeout(() => {
+                                        goalUI.style.display = "none"; respawnPos = { x: 0, y: 3, z: 8 }; currentCheckpointId = null;
+                                        document.getElementById("checkpoint-ui").style.display = "none"; isGoalCleared = false; resetPlayer();
+                                    }, 4000);
+                                }
+                            } else if (pData.type === "checkpoint") {
+                                if (currentCheckpointId !== pData.id) {
+                                    currentCheckpointId = pData.id;
+                                    const cpUI = document.getElementById("checkpoint-ui");
+                                    cpUI.style.display = "block"; cpUI.style.opacity = "1";
+                                    if (checkpointTimeout) clearTimeout(checkpointTimeout);
+                                    checkpointTimeout = setTimeout(() => {
+                                        cpUI.style.opacity = "0"; setTimeout(() => { cpUI.style.display = "none"; }, 500);
+                                    }, 3000);
+                                }
+                                respawnPos = { x: pPos.x, y: pPos.y + pData.height/2 + 1.0, z: pPos.z };
+                                pos.y = pPos.y + pData.height/2 + 1.0; vel.y = 0; isGrounded = true;
+                            } else {
+                                pos.y = pPos.y + pData.height/2 + 1.0; vel.y = 0; isGrounded = true;
+                                if (pData.type === "moving") {
+                                    if (pData.id === "move1") pos.x += Math.cos(time * 0.3) * 4.5 * 0.006; 
+                                    else if (pData.id === "move2") pos.z -= Math.sin(time * 0.4) * 4.0 * 0.008;
+                                }
+                            }
+                        }
+                    }
+                });
+
+                if (keys.shift && isGrounded && !isGoalCleared) vel.y = jumpForce;
+                if (pos.y < -15) resetPlayer();
+
+                player.position.set(pos.x, pos.y, pos.z);
+                player.rotation.y = cameraYaw;
+
+                // 🤖 刷新：マイクラ風を脱却し、コミカルな「本家ロブロックス」のローリング走りを完全再現
+                let isMoving = (keys.w || keys.s);
+                if (!isGrounded) {
+                    // 空中モーション：腕が外側に少し開き、バンザイに近いフワッとしたお人形姿勢
+                    leftArmPivot.rotation.x = Math.PI * 0.85; leftArmPivot.rotation.z = -Math.PI * 0.08;
+                    rightArmPivot.rotation.x = Math.PI * 0.85; rightArmPivot.rotation.z = Math.PI * 0.08;
+                    leftLegPivot.rotation.x = -Math.PI * 0.05; leftLegPivot.rotation.z = -Math.PI * 0.03;
+                    rightLegPivot.rotation.x = Math.PI * 0.05; rightLegPivot.rotation.z = Math.PI * 0.03;
+                    player.rotation.z = 0; // 空中は傾けない
+                } else if (isMoving && !isGoalCleared) {
+                    walkCycle += (0.28 * speedMultiplier); 
+                    const angle = Math.sin(walkCycle);
+                    
+                    // 1. 本家の特徴：走るとき、体全体が左右にピコピコとローリング（傾く）する
+                    player.rotation.z = Math.cos(walkCycle) * 0.06;
+
+                    // 2. 腕の動き：前後に振る際、少し外側に開きながらパタパタ動く
+                    leftArmPivot.rotation.x = angle * 0.65;
+                    leftArmPivot.rotation.z = -Math.PI * 0.05 + (Math.abs(angle) * -0.05);
+                    rightArmPivot.rotation.x = -angle * 0.65;
+                    rightArmPivot.rotation.z = Math.PI * 0.05 + (Math.abs(angle) * 0.05);
+
+                    // 3. 足の動き：直線ではなく、レゴのように少しガニ股気味に大きく前後にスイング
+                    leftLegPivot.rotation.x = -angle * 0.75;
+                    leftLegPivot.rotation.z = -Math.PI * 0.02;
+                    rightLegPivot.rotation.x = angle * 0.75;
+                    rightLegPivot.rotation.z = Math.PI * 0.02;
+                } else {
+                    // 直立不動：手足が少しだけハの字に開いたトイ（アバター）本来の初期ポーズ
+                    leftArmPivot.rotation.set(0, 0, -Math.PI * 0.03);
+                    rightArmPivot.rotation.set(0, 0, Math.PI * 0.03);
+                    leftLegPivot.rotation.set(0, 0, -Math.PI * 0.01);
+                    rightLegPivot.rotation.set(0, 0, Math.PI * 0.01);
+                    player.rotation.z = 0;
+                }
+            }
+
+            const camDist = 7;
+            if (cameraMode === 0) {
+                camera.position.x = player.position.x + camDist * Math.sin(cameraYaw) * Math.cos(cameraPitch);
+                camera.position.z = player.position.z + camDist * Math.cos(cameraYaw) * Math.cos(cameraPitch);
+                camera.position.y = player.position.y + camDist * Math.sin(cameraPitch) + 1.5; 
+                camera.lookAt(player.position.x, player.position.y + 0.5, player.position.z);
+                player.visible = true;
+            } else if (cameraMode === 1) {
+                camera.position.x = player.position.x - camDist * Math.sin(cameraYaw) * Math.cos(cameraPitch);
+                camera.position.z = player.position.z - camDist * Math.cos(cameraYaw) * Math.cos(cameraPitch);
+                camera.position.y = player.position.y + camDist * Math.sin(cameraPitch) + 1.5; 
+                camera.lookAt(player.position.x, player.position.y + 0.5, player.position.z);
+                player.visible = true;
+            } else if (cameraMode === 2) {
+                camera.position.x = player.position.x + 0.1 * Math.sin(cameraYaw);
+                camera.position.z = player.position.z + 0.1 * Math.cos(cameraYaw);
+                camera.position.y = player.position.y + 0.7; 
+                const targetX = camera.position.x - Math.sin(cameraYaw) * Math.cos(cameraPitch);
+                const targetZ = camera.position.z - Math.cos(cameraYaw) * Math.cos(cameraPitch);
+                const targetY = camera.position.y - Math.sin(cameraPitch);
+                camera.lookAt(targetX, targetY, targetZ);
+                player.visible = false; 
+            }
+
+            // マウスオーバーによるユーザー名表示処理
+            if (gameStarted && !isPaused) {
+                raycaster.setFromCamera(mouse, camera);
+                let targets = [player];
+                for (let id in remotePlayers) {
+                    targets.push(remotePlayers[id].mesh);
+                }
+                const intersects = raycaster.intersectObjects(targets, true);
+                const nameplate = document.getElementById("nameplate-ui");
+
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    let rootGroup = obj;
+                    while (rootGroup.parent && rootGroup.parent !== scene) {
+                        rootGroup = rootGroup.parent;
+                    }
+                    if (rootGroup && rootGroup.userData && rootGroup.userData.username) {
+                        let targetPos = rootGroup.position.clone();
+                        targetPos.y += 1.5;
+                        targetPos.project(camera);
+                        
+                        let xCoord = (targetPos.x *  .5 + .5) * window.innerWidth;
+                        let yCoord = (targetPos.y * -.5 + .5) * window.innerHeight;
+
+                        nameplate.innerText = rootGroup.userData.username;
+                        nameplate.style.left = xCoord + "px";
+                        nameplate.style.top = yCoord + "px";
+                        nameplate.style.display = "block";
+                    } else {
+                        nameplate.style.display = "none";
+                    }
+                } else {
+                    nameplate.style.display = "none";
+                }
+            } else {
+                document.getElementById("nameplate-ui").style.display = "none";
+            }
+
+            // 同期相手の描画更新
+            for (let id in remotePlayers) {
+                let rp = remotePlayers[id];
+                rp.mesh.position.set(rp.x, rp.y, rp.z);
+                rp.mesh.rotation.y = rp.yaw;
+                
+                let rLeftArm = rp.mesh.children[4];
+                let rRightArm = rp.mesh.children[5];
+                if(rp.moving) {
+                    let ra = time * 10;
+                    if(rLeftArm) rLeftArm.rotation.x = Math.sin(ra) * 0.65;
+                    if(rRightArm) rRightArm.rotation.x = -Math.sin(ra) * 0.65;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- PeerJS オンライン同期追加 ---
+        let peer = null;
+        let conn = null;
+        let remotePlayers = {};
+
+        function createRemotePlayerMesh(type = 'noob', username = 'Player') {
+            const pGroup = new THREE.Group();
+            pGroup.userData = { username: username };
+            let skinColor = 0xFF5733;
+            let torsoColor = 0x900C3F;
+            let legColor = 0x22AA22;
+            let armColor = 0xFF5733;
+
+            if (type === 'bacon') {
+                skinColor = 0xffcc99; torsoColor = 0xcc0000; legColor = 0x0033cc; armColor = 0xffcc99;
+            } else if (type === 'girl') {
+                skinColor = 0xffcc99; torsoColor = 0xff66b2; legColor = 0x333333; armColor = 0xffcc99;
+            } else if (type === 'steve') {
+                skinColor = 0xc48c64; torsoColor = 0x2d5a7d; legColor = 0x3b3b6b; armColor = 0xc48c64;
+            } else if (type === 'alex') {
+                skinColor = 0xd89d7a; torsoColor = 0x738c42; legColor = 0x735a3b; armColor = 0xd89d7a;
+            }
+
+            const hGeo = new THREE.BoxGeometry(0.65, 0.65, 0.65);
+            const hMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.7 });
+            const hMesh = new THREE.Mesh(hGeo, hMat); hMesh.position.y = 0.72; pGroup.add(hMesh);
+
+            if (type === 'bacon') {
+                const hairMat = new THREE.MeshStandardMaterial({ color: 0x996633, roughness: 0.9 });
+                pGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.2, 0.7), hairMat)).position.set(0, 1.05, 0);
+            } else if (type === 'girl') {
+                const hairMat = new THREE.MeshStandardMaterial({ color: 0x553311, roughness: 0.9 });
+                pGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.7, 0.72), hairMat)).position.set(0, 0.75, 0);
+            } else if (type === 'steve') {
+                const hairMat = new THREE.MeshStandardMaterial({ color: 0x3b220a, roughness: 0.9 });
+                pGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.67, 0.25, 0.67), hairMat)).position.set(0, 0.92, 0);
+            } else if (type === 'alex') {
+                const hairMat = new THREE.MeshStandardMaterial({ color: 0xd9822b, roughness: 0.9 });
+                pGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.67, 0.3, 0.67), hairMat)).position.set(0, 0.9, 0);
+            }
+
+            const tGeo = new THREE.BoxGeometry(0.9, 0.8, 0.5);
+            const tMat = new THREE.MeshStandardMaterial({ color: torsoColor, roughness: 0.7 });
             const tMesh = new THREE.Mesh(tGeo, tMat); tMesh.position.y = 0.0; pGroup.add(tMesh);
 
             const lLP = new THREE.Group(); lLP.position.set(-0.23, -0.4, 0);
